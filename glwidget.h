@@ -54,6 +54,7 @@
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
 #include <QOpenGLBuffer>
+#include <QMatrix4x4>
 
 QT_FORWARD_DECLARE_CLASS(QOpenGLShaderProgram);
 QT_FORWARD_DECLARE_CLASS(QOpenGLTexture);
@@ -77,6 +78,7 @@ private:
     QOpenGLShaderProgram *program;
     QOpenGLTexture *texture;
     QOpenGLBuffer vbo;
+    QMatrix4x4 rot;
 };
 
 #endif

@@ -27,11 +27,12 @@ static const char *vertexShaderSource =
     "uniform vec2 offset;\n"
     "uniform vec2 scale;\n"
     "varying vec2 tcoord;\n"
+    "uniform mat4 matrix;\n"
     "void main(void) {\n"
     "   vec4 pos = vertex;\n"
     "   tcoord.xy = pos.xy;\n"
     "   pos.xy = pos.xy*scale+offset;\n"
-    "   gl_Position = pos;\n"
+    "   gl_Position = matrix * pos;\n"
     "}\n";
 
 static const char *fragmentShaderSource =
@@ -58,9 +59,14 @@ void GLWidget::initializeGL()
     vbo.bind();
     vbo.allocate(quad_vertex_positions, sizeof(quad_vertex_positions));
 
+    // Setup rotation matrix
+    rot.setToIdentity();
+    rot.rotate(90, 0.0f, 0.0f, 1.0f);
+
     texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
     texture->setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
-    texture->setSize(640, 480);
+    texture->setSize(1312, 976);
+    //texture->setSize(640, 480);
     texture->setFormat(QOpenGLTexture::RGBAFormat);
     texture->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
 
@@ -77,6 +83,7 @@ void GLWidget::initializeGL()
 
 void GLWidget::paintGL()
 {
+    program->setUniformValue("matrix", rot);
     program->setUniformValue("offset", 1.f, -1.f);
     program->setUniformValue("scale", -2.f, 2.f);
     program->enableAttributeArray(PROGRAM_VERTEX_ATTRIBUTE);
@@ -92,5 +99,6 @@ void GLWidget::resizeGL(int width, int height)
 
 void GLWidget::SetPixels(const void * data)
 {
-    texture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, data);
+    if (texture)
+        texture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, data);
 }
