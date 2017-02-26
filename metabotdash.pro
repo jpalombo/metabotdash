@@ -27,13 +27,40 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     glwidget.cpp \
     camera.cpp \
-    cameracontrol.cpp
+    cameracontrol.cpp \
+    mpu/I2Cdev.c \
+    mpu/inv_mpu.c \
+    mpu/inv_mpu_dmp_motion_driver.c \
+    sensors.cpp \
+    joystick.cpp \
+    modes.cpp \
+    abstractmode.cpp \
+    manualmode.cpp \
+    speedmode.cpp \
+    mazemode.cpp \
+    linemode.cpp \
+    statusmode.cpp
 
 HEADERS  += mainwindow.h \
     glwidget.h \
     camera.h \
     cameracontrol.h \
-    mmalincludes.h
+    mmalincludes.h \
+    mpu/dmpKey.h \
+    mpu/dmpmap.h \
+    mpu/helper_3dmath.h \
+    mpu/I2Cdev.h \
+    mpu/inv_mpu.h \
+    mpu/inv_mpu_dmp_motion_driver.h \
+    sensors.h \
+    joystick.h \
+    modes.h \
+    abstractmode.h \
+    manualmode.h \
+    speedmode.h \
+    mazemode.h \
+    linemode.h \
+    statusmode.h
 
 FORMS    += mainwindow.ui
 

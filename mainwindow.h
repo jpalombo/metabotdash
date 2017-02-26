@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 #include <QTimer>
-#include "camera.h"
+#include "modes.h"
 
 namespace Ui {
 class MainWindow;
@@ -19,19 +19,12 @@ public:
 
 private:
     Ui::MainWindow *ui;
-    CCamera* cam;
-    int fps;
-    QTimer *timer0;
-    QTimer *timer1sec;
     QTimer *timer1min;
-
-    void setLightsOn(bool);
+    Modes *modes;
 
 private slots:
-    void on_pushButton_exit_clicked();
-    void capture();
-    void onesec();
     void unblank();
+    void on_pushButton_exit_clicked();
     void on_manual_toggled(bool checked);
     void on_speed_toggled(bool checked);
     void on_maze_toggled(bool checked);

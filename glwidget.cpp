@@ -9,7 +9,9 @@ GLWidget::GLWidget(QWidget *parent)
     : QOpenGLWidget(parent),
       clearColor(Qt::black),
       program(0),
-      texture(0)
+      texture(0),
+      buffHeight(480),
+      buffWidth(640)
 {
 }
 
@@ -24,14 +26,11 @@ GLWidget::~GLWidget()
 
 static const char *vertexShaderSource =
     "attribute vec4 vertex;\n"
-    "uniform vec2 offset;\n"
-    "uniform vec2 scale;\n"
     "varying vec2 tcoord;\n"
     "uniform mat4 matrix;\n"
     "void main(void) {\n"
     "   vec4 pos = vertex;\n"
     "   tcoord.xy = pos.xy;\n"
-    "   pos.xy = pos.xy*scale+offset;\n"
     "   gl_Position = matrix * pos;\n"
     "}\n";
 
@@ -42,6 +41,12 @@ static const char *fragmentShaderSource =
     "   gl_FragColor = texture2D(tex,tcoord);\n"
     "}\n";
 
+
+void GLWidget::setBuffSize(int width, int height)
+{
+    buffWidth = width;
+    buffHeight = height;
+}
 
 void GLWidget::initializeGL()
 {
@@ -62,11 +67,12 @@ void GLWidget::initializeGL()
     // Setup rotation matrix
     rot.setToIdentity();
     rot.rotate(90, 0.0f, 0.0f, 1.0f);
+    rot.translate(1.0f, -1.0f);
+    rot.scale(-2.0f, 2.0f);
 
     texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
     texture->setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
-    texture->setSize(1312, 976);
-    //texture->setSize(640, 480);
+    texture->setSize(buffWidth, buffHeight);
     texture->setFormat(QOpenGLTexture::RGBAFormat);
     texture->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
 
@@ -84,8 +90,6 @@ void GLWidget::initializeGL()
 void GLWidget::paintGL()
 {
     program->setUniformValue("matrix", rot);
-    program->setUniformValue("offset", 1.f, -1.f);
-    program->setUniformValue("scale", -2.f, 2.f);
     program->enableAttributeArray(PROGRAM_VERTEX_ATTRIBUTE);
     program->setAttributeBuffer(PROGRAM_VERTEX_ATTRIBUTE, GL_FLOAT, 0, 4, 4 * sizeof(GLfloat));
     texture->bind();
@@ -97,8 +101,9 @@ void GLWidget::resizeGL(int width, int height)
     glViewport(0, 0, width, height);
 }
 
-void GLWidget::SetPixels(const void * data)
+void GLWidget::setPixels(const void * data)
 {
     if (texture)
         texture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, data);
 }
+

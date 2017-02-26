@@ -66,7 +66,8 @@ class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 public:
     GLWidget(QWidget *parent = 0);
     ~GLWidget();
-    void SetPixels(const void *);
+    void setPixels(const void *);
+    void setBuffSize(int width, int height);
 
 protected:
     void initializeGL() Q_DECL_OVERRIDE;
@@ -79,6 +80,8 @@ private:
     QOpenGLTexture *texture;
     QOpenGLBuffer vbo;
     QMatrix4x4 rot;
+    int buffHeight;
+    int buffWidth;
 };
 
 #endif

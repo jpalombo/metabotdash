@@ -2,16 +2,42 @@
 #define MODES_H
 
 #include <QObject>
+#include <QTimer>
+#include "camera.h"
+#include "sensors.h"
+#include "joystick.h"
+#include "abstractmode.h"
+
+namespace Ui {
+class MainWindow;
+}
 
 class Modes : public QObject
 {
     Q_OBJECT
 public:
-    explicit Modes(QObject *parent = 0);
+    explicit Modes(Ui::MainWindow *mui, QObject *parent = 0);
+    ~Modes();
+
+    enum ModeType {Manual, Maze, Speed, Line, Status};
+    void setMode(ModeType);
+
+private:
+    Ui::MainWindow *ui;
+    CCamera* cam;
+    QTimer *timer0;
+    int buffWidth;
+    int buffHeight;
+    Sensors *sensors;
+    Joystick *joystick;
+    void setLightsOn(bool);
+    AbstractMode *mode;
 
 signals:
 
 public slots:
+    void joystickConnected(bool);
+    void idle();
 };
 
 #endif // MODES_H
