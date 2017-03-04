@@ -10,6 +10,7 @@ extern "C" {
 Sensors::Sensors() :
     gyroOffset{0, 0, 0},
     accelOffset{0, 0, 0},
+    autoPing(false),
     continueThread(true)
 {
     for(int i = 0; i < 4; i++) {
@@ -41,7 +42,7 @@ void Sensors::run()
 {
     mpuOpen();
     while (continueThread) {
-        msleep(10);
+        msleep(2);
         readGyro();
         readAccel();
         readCompass();
@@ -117,9 +118,9 @@ int Sensors::mpuOpen()
 void Sensors::readGyro() {
     short m_gyro[3];        // [x, y, z]           gyro vector
     if (mpu_get_gyro_reg(m_gyro, 0) == 0) {
-        gyro[0] = m_gyro[0];
-        gyro[1] = m_gyro[1];
-        gyro[2] = m_gyro[2];
+        gyro[0] = m_gyro[0] - gyroOffset[0];
+        gyro[1] = m_gyro[1] - gyroOffset[1];
+        gyro[2] = m_gyro[2] - gyroOffset[2];
     } else {
         qDebug() << "Failed to read gyro";
     }
@@ -158,22 +159,54 @@ void Sensors::readTemp()
     }
 }
 
+// I2C interface : registers
+//      0 :     Motor 0 position (4 bytes)
+//      4 :     Motor 1 position (4 bytes)
+//      8 :     Motor 2 position (4 bytes)
+//      12 :    Motor 3 position (4 bytes)
+//      16 :    Left Ping distance in mm (2 bytes)
+//      18 :    Right Ping distance in mm (2 bytes)
+//      20 :    Front Ping distance in mm (2 bytes)
+//      22 :    Target Motor 0 Speed (1 byte) signed -127 - 127
+//      23 :    Target Motor 1 Speed (1 byte)
+//      24 :    Target Motor 2 Speed (1 byte)
+//      25 :    Target Motor 3 Speed (1 byte)
+//      26 :    Options (low bit = autoping on / off)
+//      27 :    Read Ready (master sets to 1 when ready to read, slave sets to zero when multi-byte values updated
 void Sensors::readProp()
 {
+    // Write out speed registers and autoping setting
     QByteArray registers(32, 0);
-    int count;
-    count = readBytes(0x42, 8, 8, (uint8_t *)registers.data());
+    for(int i = 0; i < 4; i++) {
+        int8_t s = motorSpeed[i];
+        registers[i] = s;
+    }
+    registers[4] = autoPing;
+    writeBytes(0x42, 22, 5, (uint8_t *) registers.data());
+
+    // Check if there is data ready to read
+    int count = readBytes(0x42, 27, 1, (uint8_t *)registers.data());  // Read Register 27 = Read Ready
     if (count < 0) {
         // Propeller has reset itself, try reloading
         reloadProp();
+        return;
     }
-  //  if (count >= 0)
-  //      qDebug() << count << registers.toHex();
-
-    for(int i = 0; i < 4; i++) {
-        int s = motorSpeed[i];
-        registers[i*2] = qAbs(s);
-        registers[i*2 + 1] = motorSpeed[i] < 0;
+    if ((count > 0) && (registers.at(0) == 0)) {  // Check Read Ready flag
+        int totalD = 0;
+        // read the data
+        count = readBytes(0x42, 0, 22, (uint8_t *)registers.data());
+        for(int i = 0; i < 4; i++) {
+            int d = registers.at(i*4);
+            for(int j = 1; j < 4; j++) {
+                d += registers.at(i*4 + j) << (j*8);
+            }
+            motorDistance[i] = d;
+            totalD += d;
+        }
+        totalDistance = totalD;
+        pingLeft = registers.at(16) + (registers.at(17) << 8);
+        pingRight = registers.at(18) + (registers.at(19) << 8);
+        pingFront = registers.at(20) + (registers.at(21) << 8);
+        writeByte(0x42, 27, 1);  // prime ready for next read
     }
-    writeBytes(0x42, 0, 8,(uint8_t *) registers.data());
 }

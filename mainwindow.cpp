@@ -9,6 +9,12 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    // Set-up Application
+    QCoreApplication::setOrganizationName("Metabot");
+    QCoreApplication::setOrganizationDomain("metaswitch.com");
+    QCoreApplication::setApplicationName("Metabot3 Dashboard");
+
+    // Set-up variables
     modes = new Modes(ui, this);
 
     // Adjust screen
@@ -76,4 +82,7 @@ void MainWindow::on_test_toggled(bool checked)
         modes->setMode(Modes::Status);
 }
 
-
+void MainWindow::on_speedgo_toggled(bool checked)
+{
+    modes->buttonClicked(Modes::Go, checked);
+}

@@ -26,6 +26,8 @@ public:
 
     QAtomicInt motorSpeed[4];    // -100 to 100
     QAtomicInt motorDistance[4];
+    QAtomicInt totalDistance;
+    bool autoPing;
 
 protected:
     void run();

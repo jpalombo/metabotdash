@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/image">
         <file>metabot.ico</file>
+        <file>down.png</file>
+        <file>up.png</file>
     </qresource>
 </RCC>

@@ -20,7 +20,9 @@ public:
     ~Modes();
 
     enum ModeType {Manual, Maze, Speed, Line, Status};
+    enum Buttons {Go};
     void setMode(ModeType);
+    void buttonClicked(Buttons, bool checked);
 
 private:
     Ui::MainWindow *ui;

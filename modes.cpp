@@ -41,11 +41,14 @@ Modes::Modes(Ui::MainWindow *mui, QObject *parent) :
 Modes::~Modes()
 {
     StopCamera();
+    delete mode;
+    mode = 0;
 }
 
 void Modes::setMode(Modes::ModeType newMode)
 {
     delete mode;
+    mode = 0;
 
     switch (newMode) {
     case Manual:
@@ -63,6 +66,13 @@ void Modes::setMode(Modes::ModeType newMode)
     case Status:
         mode = new StatusMode(ui, joystick, sensors, cam);
         break;
+    }
+}
+
+void Modes::buttonClicked(Modes::Buttons button, bool checked)
+{
+    if (button == Go && mode) {
+        mode->go(checked);
     }
 }
 

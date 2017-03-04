@@ -30,6 +30,8 @@ private slots:
     void on_maze_toggled(bool checked);
     void on_line_toggled(bool checked);
     void on_test_toggled(bool checked);
+
+    void on_speedgo_toggled(bool checked);
 };
 
 #endif // MAINWINDOW_H

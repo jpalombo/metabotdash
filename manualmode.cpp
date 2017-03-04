@@ -13,11 +13,5 @@ void ManualMode::joystickUpdate()
     ui->posy->setText(QString::number(joystick->posy));
     ui->dmh->setText(QString::number(joystick->dmh));
 
-    int leftspeed = joystick->posy/500 - joystick->posx/1000;
-    int rightspeed = joystick->posy/500 + joystick->posx/1000;
-
-    sensors->motorSpeed[0] = leftspeed;
-    sensors->motorSpeed[3] = leftspeed;
-    sensors->motorSpeed[1] = rightspeed;
-    sensors->motorSpeed[2] = rightspeed;
+    speed.setSpeedDir(joystick->posy/500, joystick->posx/1000);
 }

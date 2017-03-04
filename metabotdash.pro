@@ -39,7 +39,9 @@ SOURCES += main.cpp\
     speedmode.cpp \
     mazemode.cpp \
     linemode.cpp \
-    statusmode.cpp
+    statusmode.cpp \
+    speedcontrol.cpp \
+    pid.cpp
 
 HEADERS  += mainwindow.h \
     glwidget.h \
@@ -60,7 +62,9 @@ HEADERS  += mainwindow.h \
     speedmode.h \
     mazemode.h \
     linemode.h \
-    statusmode.h
+    statusmode.h \
+    speedcontrol.h \
+    pid.h
 
 FORMS    += mainwindow.ui
 
