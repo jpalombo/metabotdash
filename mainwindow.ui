@@ -185,7 +185,7 @@ QSpinBox::down-button {
     <item>
      <widget class="QStackedWidget" name="pages">
       <property name="currentIndex">
-       <number>0</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="manualpage">
        <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -1056,7 +1056,7 @@ QSpinBox::down-button {
              </size>
             </property>
             <property name="text">
-             <string>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt; Go &gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;</string>
+             <string>&lt;&lt;&lt;&lt;&lt; Go &lt;&lt;&lt;&lt;&lt;</string>
             </property>
             <property name="checkable">
              <bool>true</bool>

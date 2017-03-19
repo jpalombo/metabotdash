@@ -67,8 +67,8 @@ void LineMode::joystickUpdate(int eType, int eNumber, int eValue)
 void LineMode::LineMode::idle()
 {
     capture();
-    ui->linespeedactual->setText("Speed : " + QString::number(-speed.speed()));
-    ui->linediractual->setText("Dir : "+ QString::number(-speed.direction()));
+    ui->linespeedactual->setText("Speed : " + QString::number(speed.speed()));
+    ui->linediractual->setText("Dir : "+ QString::number(speed.direction()));
 }
 
 void LineMode::go(bool checked)
@@ -78,10 +78,10 @@ void LineMode::go(bool checked)
         ui->linego->setText("Stop");
         speed.setAccel(ui->lineaccel->value());
         speed.setDirection(0);
-        speed.setSpeed(-ui->linespeed->value());
+        speed.setSpeed(ui->linespeed->value());
     } else {
         // Now stopped, so action of button would be to start
-        ui->linego->setText(" >>>>> Go >>>>>");
+        ui->linego->setText(" <<<<< Go <<<<<");
         speed.stop();
     }
 }
@@ -128,6 +128,8 @@ int LineMode::etoi(int e)
     // Bottom Right = 110
     // Range = -158 to 157
 
+    const int maxscreen = (CAMWIDTH * CAMHEIGHT) - 1;
+
     // normalise e
     while (e >= halfrange)
         e -= halfrange*2;
@@ -136,18 +138,18 @@ int LineMode::etoi(int e)
 
     // check if e on the top edge
     if (e >= topleft && e <= topright)
-        return e + CAMWIDTH/2;
+        return maxscreen - (e + CAMWIDTH/2);
 
     if (e > 0) {  // On the right hand half
         if (e <= bottomright)   // right hand edge
-            return (CAMWIDTH * (e + 1 - topright)) - 1;
+            return maxscreen - ((CAMWIDTH * (e + 1 - topright)) - 1);
         // else on the bottom edge
-        return (CAMWIDTH * CAMHEIGHT) - (e - bottomright + 1);
+        return maxscreen - ((CAMWIDTH * CAMHEIGHT) - (e - bottomright + 1));
     } else { // On the left hand half
         if (e >= bottomleft)   // left hand edge
-            return CAMWIDTH * (topleft - e);
+            return maxscreen - (CAMWIDTH * (topleft - e));
         // else on the bottom edge
-        return (CAMWIDTH * (CAMHEIGHT - 1)) + (bottomleft - e);
+        return maxscreen - ((CAMWIDTH * (CAMHEIGHT - 1)) + (bottomleft - e));
     }
 }
 
@@ -195,7 +197,7 @@ void LineMode::processFrame(Mat frame)
 
         if (ui->linego->isChecked()){
             int error = topright - qAbs(midblack);
-            speed.setSpeedDir(-error * ui->linespeedfactor->value() * ui->linespeed->value() / 500,
+            speed.setSpeedDir(error * ui->linespeedfactor->value() * ui->linespeed->value() / 500,
                               -midblack * ui->linedirfactor->value() * ui->linespeed->value() / 500);
 
 
