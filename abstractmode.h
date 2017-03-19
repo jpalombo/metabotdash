@@ -12,13 +12,21 @@ namespace Ui {
 class MainWindow;
 }
 
+//#define CAMWIDTH 768
+//#define CAMHEIGHT 512
+
+#define CAMWIDTH 96
+#define CAMHEIGHT 64
+
 class AbstractMode : public QObject
 {
     Q_OBJECT
 public:
+    enum Buttons {Go, ConfigCompass, ConfigGyro};
     explicit AbstractMode(Ui::MainWindow*, Joystick*, Sensors*, CCamera*);
     virtual void idle();        // called when the message loop is idle
     virtual void go(bool);
+    virtual void buttonClicked(Buttons, bool checked);
 
 protected:
     Ui::MainWindow *ui;
@@ -27,9 +35,6 @@ protected:
     CCamera* cam;
     SpeedControl speed;
 
-signals:
-
-public slots:
 };
 
 #endif // ABSTRACTMODE_H

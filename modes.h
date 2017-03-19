@@ -20,9 +20,8 @@ public:
     ~Modes();
 
     enum ModeType {Manual, Maze, Speed, Line, Status};
-    enum Buttons {Go};
     void setMode(ModeType);
-    void buttonClicked(Buttons, bool checked);
+    void buttonClicked(AbstractMode::Buttons, bool checked);
 
 private:
     Ui::MainWindow *ui;
@@ -40,6 +39,7 @@ signals:
 public slots:
     void joystickConnected(bool);
     void idle();
+
 };
 
 #endif // MODES_H

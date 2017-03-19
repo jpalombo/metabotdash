@@ -84,5 +84,31 @@ void MainWindow::on_test_toggled(bool checked)
 
 void MainWindow::on_speedgo_toggled(bool checked)
 {
-    modes->buttonClicked(Modes::Go, checked);
+    modes->buttonClicked(AbstractMode::Buttons::Go, checked);
 }
+
+void MainWindow::on_mazego_toggled(bool checked)
+{
+    modes->buttonClicked(AbstractMode::Buttons::Go, checked);
+}
+
+void MainWindow::on_linego_toggled(bool checked)
+{
+    modes->buttonClicked(AbstractMode::Buttons::Go, checked);
+}
+
+void MainWindow::on_configCompass_clicked(bool checked)
+{
+    modes->buttonClicked(AbstractMode::ConfigCompass, checked);
+}
+
+void MainWindow::on_configGyro_clicked(bool checked)
+{
+    modes->buttonClicked(AbstractMode::ConfigGyro, checked);
+}
+
+void MainWindow::on_mazeResetBearing_clicked(bool checked)
+{
+    modes->buttonClicked(AbstractMode::ConfigGyro, checked);
+}
+

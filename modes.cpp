@@ -24,9 +24,9 @@ Modes::Modes(Ui::MainWindow *mui, QObject *parent) :
 
     //init camera
     ui->glWidget->update();
-    cam = StartCamera(320, 240, 30, 1, true);
-    buffWidth = 320;
-    buffHeight = 240;
+    cam = StartCamera(CAMWIDTH, CAMHEIGHT, 15, 1, false);
+    buffWidth = CAMWIDTH;
+    buffHeight = CAMHEIGHT;
     ui->glWidget->setBuffSize(buffWidth, buffHeight);
 
     // set default mode
@@ -40,6 +40,10 @@ Modes::Modes(Ui::MainWindow *mui, QObject *parent) :
 
 Modes::~Modes()
 {
+    delete joystick;
+    joystick = 0;
+    delete sensors;
+    sensors = 0;
     StopCamera();
     delete mode;
     mode = 0;
@@ -69,10 +73,17 @@ void Modes::setMode(Modes::ModeType newMode)
     }
 }
 
-void Modes::buttonClicked(Modes::Buttons button, bool checked)
+void Modes::buttonClicked(AbstractMode::Buttons button, bool checked)
 {
-    if (button == Go && mode) {
+    if (!mode)
+        return;
+
+    switch (button) {
+    case AbstractMode::Go:
         mode->go(checked);
+        break;
+    default :
+        mode->buttonClicked(button, checked);
     }
 }
 
@@ -83,7 +94,6 @@ void Modes::joystickConnected(bool connected)
     } else {
         ui->statusBar->showMessage("Joystick not connected - try starting it");
     }
-
 }
 
 void Modes::idle()

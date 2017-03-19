@@ -1,9 +1,31 @@
+#include <QMutexLocker>
 #include "speedcontrol.h"
 
 SpeedControl::SpeedControl(Sensors * s) :
-    sensors(s), targetAccel(0)
+    lock(), sensors(s), targetAccel(0), continueThread(true)
 {
-    stop();
+    stop();     // stop the robot
+    start();    // start the update thread
+}
+
+SpeedControl::~SpeedControl()
+{
+    continueThread = false;
+    exit();
+    wait();
+
+    sensors->motorSpeed[0] = 0;
+    sensors->motorSpeed[3] = 0;
+    sensors->motorSpeed[1] = 0;
+    sensors->motorSpeed[2] = 0;
+}
+
+void SpeedControl::run()
+{
+    while (continueThread) {
+        update();
+        msleep(1);
+    }
 }
 
 void SpeedControl::setAccel(int a)
@@ -19,9 +41,7 @@ void SpeedControl::setSpeed(int s)
 
 void SpeedControl::setDirection(int d)
 {
-    targetDirection = d;
-    targetSpeedL = targetSpeed - targetDirection;
-    targetSpeedR = targetSpeed + targetDirection;
+    setSpeedDir(targetSpeed, d);
 }
 
 void SpeedControl::stop()
@@ -29,8 +49,11 @@ void SpeedControl::stop()
     setSpeedDir(0, 0);
 }
 
-int SpeedControl::setSpeedDir(int s, int d)
+void SpeedControl::setSpeedDir(int s, int d)
 {
+    if (targetSpeed == s && targetDirection == d)
+        return;  // nothing to do
+    QMutexLocker locker(&lock);
     targetSpeed = s;
     targetDirection = d;
 
@@ -48,11 +71,12 @@ int SpeedControl::setSpeedDir(int s, int d)
         accelms = maxdelta * 1000 / targetAccel;
     }
     timer.start();
-    return update();
+    return;
 }
 
 int SpeedControl::update()
 {
+    QMutexLocker locker(&lock);
     int leftspeed;
     int rightspeed;
 
@@ -78,11 +102,18 @@ int SpeedControl::accel()
 
 int SpeedControl::direction()
 {
-    return targetDirection;
+    QMutexLocker locker(&lock);
+    return (sensors->motorSpeed[1] - sensors->motorSpeed[0]) / 2;
 }
 
 int SpeedControl::speed()
 {
-    return targetSpeed;
+    QMutexLocker locker(&lock);
+    return (sensors->motorSpeed[0] + sensors->motorSpeed[1]) / 2;
 }
 
+int SpeedControl::stoppingDistance()
+{
+    int v = speed();
+    return 30*v*v/(targetAccel * 2);
+}

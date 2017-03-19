@@ -41,7 +41,9 @@ SOURCES += main.cpp\
     linemode.cpp \
     statusmode.cpp \
     speedcontrol.cpp \
-    pid.cpp
+    pid.cpp \
+    filter.cpp \
+    lodepng/lodepng.cpp
 
 HEADERS  += mainwindow.h \
     glwidget.h \
@@ -64,7 +66,9 @@ HEADERS  += mainwindow.h \
     linemode.h \
     statusmode.h \
     speedcontrol.h \
-    pid.h
+    pid.h \
+    filter.h \
+    lodepng/lodepng.h
 
 FORMS    += mainwindow.ui
 
@@ -109,6 +113,7 @@ LIBS += \
     -L$$LIBS_PATH \
     -lopencv_core \
     -lopencv_imgproc \
+#   -lopencv_highgui \
     -lmmal_core \
     -lmmal_util \
     -lmmal_vc_client \

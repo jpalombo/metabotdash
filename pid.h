@@ -15,7 +15,7 @@ public:
     void setKd(int);
 
     int update(int);
-    void reset();
+    void reset(int seed);
 
 private:
     int mKp;

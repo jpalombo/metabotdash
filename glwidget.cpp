@@ -73,8 +73,8 @@ void GLWidget::initializeGL()
     texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
     texture->setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
     texture->setSize(buffWidth, buffHeight);
-    texture->setFormat(QOpenGLTexture::RGBAFormat);
-    texture->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+    texture->setFormat(QOpenGLTexture::LuminanceFormat);
+    texture->allocateStorage(QOpenGLTexture::Luminance, QOpenGLTexture::UInt8);
 
     #define PROGRAM_VERTEX_ATTRIBUTE 0
 
@@ -104,6 +104,6 @@ void GLWidget::resizeGL(int width, int height)
 void GLWidget::setPixels(const void * data)
 {
     if (texture)
-        texture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, data);
+        texture->setData(QOpenGLTexture::Luminance, QOpenGLTexture::UInt8, data);
 }
 

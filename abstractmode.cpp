@@ -14,3 +14,10 @@ void AbstractMode::go(bool)
 {
 
 }
+
+void AbstractMode::buttonClicked(AbstractMode::Buttons button, bool checked)
+{
+    Q_UNUSED(button);
+    Q_UNUSED(checked);
+}
+

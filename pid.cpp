@@ -15,13 +15,13 @@ int Pid::update(int err)
     integral += err;
 
     //qDebug() << mKp * err <<  mKi * integral << mKd * delta;
-    return (mKp * err) + (mKi * integral) + (mKd * delta);
+    return (mKp * err) + (mKi * integral / 100) + (mKd * delta * 10);
 }
 
-void Pid::reset()
+void Pid::reset(int seed)
 {
-    integral = 0;
-    lasterr = 0;
+    integral = seed;
+    lasterr = seed;
 }
 
 int Pid::kp()

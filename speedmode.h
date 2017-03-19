@@ -3,6 +3,7 @@
 
 #include <QTime>
 #include <QTimer>
+#include <QFile>
 #include "abstractmode.h"
 #include "pid.h"
 
@@ -19,12 +20,16 @@ private:
     QTimer *timer1sec;
     Pid pid;
     int loopcount;
+    int pinglower;
+    int pinghigher;
     int lastdistance;
+    int direrror;
+    QFile file;
 
     int calcDirection();
 
 public slots:
-    void joystickUpdate();
+    void joystickUpdate(int, int, int);
     void onesec();
 
 };

@@ -1,5 +1,7 @@
 #include <QDebug>
 #include <QProcess>
+#include <QSettings>
+#include <QCoreApplication>
 
 #include "sensors.h"
 extern "C" {
@@ -10,12 +12,22 @@ extern "C" {
 Sensors::Sensors() :
     gyroOffset{0, 0, 0},
     accelOffset{0, 0, 0},
-    autoPing(false),
-    continueThread(true)
+    autoPing(0),
+    continueThread(true),
+    paused(false)
 {
     for(int i = 0; i < 4; i++) {
         motorSpeed[i] = 0;
     }
+    QSettings settings;
+    settings.beginGroup("Sensors");
+    compassOffset[0] = settings.value("CompassOffsetX", 0).toInt();
+    compassOffset[1] = settings.value("CompassOffsetY", 0).toInt();
+    compassOffset[2] = settings.value("CompassOffsetZ", 0).toInt();
+    compassScale[0]= settings.value("CompassScaleX", 0.0).toFloat();
+    compassScale[1]= settings.value("CompassScaleY", 0.0).toFloat();
+    compassScale[2]= settings.value("CompassScaleZ", 0.0).toFloat();
+    settings.endGroup();
 
     reloadProp();
     start();
@@ -23,6 +35,16 @@ Sensors::Sensors() :
 
 Sensors::~Sensors()
 {
+    QSettings settings;
+    settings.beginGroup("Sensors");
+    settings.setValue("CompassOffsetX", (int)compassOffset[0]);
+    settings.setValue("CompassOffsetY", (int)compassOffset[1]);
+    settings.setValue("CompassOffsetZ", (int)compassOffset[2]);
+    settings.setValue("CompassScaleX", compassScale[0]);
+    settings.setValue("CompassScaleY", compassScale[1]);
+    settings.setValue("CompassScaleZ", compassScale[2]);
+    settings.endGroup();
+
     continueThread = false;
     exit();
     wait();
@@ -43,11 +65,15 @@ void Sensors::run()
     mpuOpen();
     while (continueThread) {
         msleep(2);
-        readGyro();
-        readAccel();
-        readCompass();
-        readTemp();
-        readProp();
+        if (!paused){
+            readGyro();
+            readAccel();
+            readCompass();
+            readTemp();
+            readProp();
+            integral += gyro[0];
+            bearing = integral/1361;
+        }
     }
 }
 
@@ -95,32 +121,49 @@ int Sensors::mpuOpen()
         qDebug() << "MPU6050 connection failed" << devStatus;
 
     // calibrating
+    qDebug() << "Calibrating...";
+    msleep(50);
+    configGyro(500);
+    qDebug() << "Done.";
+    return 0;
+}
+
+void Sensors::configGyro(int limit) {
+    int count = 0;
     short m_gyro[3];
     int gyrosum[3] = { 0, 0, 0 };
-    int count = 0;
     int i;
-    qDebug() << "Calibrating...";
-    while (count < 300) {
+
+    paused = true;
+    while (count < limit) {
+        if (count % 16 == 0)
+            QCoreApplication::processEvents();
+        else
+            msleep(1);
         if (mpu_get_gyro_reg(m_gyro, 0) == 0) {
             for (i = 0; i < 3; i++)
                 gyrosum[i] += m_gyro[i];
             count++;
         }
-        usleep(1000);
     }
     for (i = 0; i < 3; i++)
         gyroOffset[i] = gyrosum[i] / count;
+    bearing = 0;
+    integral = 0;
     qDebug() << "Gyro offset :" << gyroOffset[0] << gyroOffset[1] << gyroOffset[2];
-    qDebug() << "Done.";
-    return 0;
+    paused = false;
+}
+
+void Sensors::resetBearing()
+{
+    integral = 0;
 }
 
 void Sensors::readGyro() {
     short m_gyro[3];        // [x, y, z]           gyro vector
     if (mpu_get_gyro_reg(m_gyro, 0) == 0) {
-        gyro[0] = m_gyro[0] - gyroOffset[0];
-        gyro[1] = m_gyro[1] - gyroOffset[1];
-        gyro[2] = m_gyro[2] - gyroOffset[2];
+        for (int i = 0; i < 3; i++)
+            gyro[i] = m_gyro[i] - gyroOffset[i];
     } else {
         qDebug() << "Failed to read gyro";
     }
@@ -129,9 +172,8 @@ void Sensors::readGyro() {
 void Sensors::readAccel() {
     short m_accel[3];       // [x, y, z]           accel vector
     if (mpu_get_accel_reg(m_accel, 0) == 0) {
-        accel[0] = m_accel[0];
-        accel[1] = m_accel[1];
-        accel[2] = m_accel[2];
+        for (int i = 0; i < 3; i++)
+            accel[i] = m_accel[i];
     } else {
         qDebug() << "Failed to read accel";
     }
@@ -141,9 +183,8 @@ void Sensors::readCompass() {
     short m_compass[3];
     int rc = mpu_get_compass_reg(m_compass, 0);
     if (rc == 0) {
-        compass[0] = m_compass[0];
-        compass[1] = m_compass[1];
-        compass[2] = m_compass[2];
+        for (int i = 0; i < 3; i++)
+            compass[i] = (int) ((float)(m_compass[i] - compassOffset[i]) * compassScale[i]);
     } else {
         qDebug() << "Failed to read compass" << rc;
     }
@@ -178,7 +219,7 @@ void Sensors::readProp()
     // Write out speed registers and autoping setting
     QByteArray registers(32, 0);
     for(int i = 0; i < 4; i++) {
-        int8_t s = motorSpeed[i];
+        int8_t s = -motorSpeed[i];
         registers[i] = s;
     }
     registers[4] = autoPing;
@@ -200,12 +241,12 @@ void Sensors::readProp()
             for(int j = 1; j < 4; j++) {
                 d += registers.at(i*4 + j) << (j*8);
             }
-            motorDistance[i] = d;
-            totalD += d;
+            motorDistance[i] = -d;
+            totalD += -d;
         }
         totalDistance = totalD;
-        pingLeft = registers.at(16) + (registers.at(17) << 8);
-        pingRight = registers.at(18) + (registers.at(19) << 8);
+        pingLeft = registers.at(18) + (registers.at(19) << 8);
+        pingRight = registers.at(16) + (registers.at(17) << 8);
         pingFront = registers.at(20) + (registers.at(21) << 8);
         writeByte(0x42, 27, 1);  // prime ready for next read
     }

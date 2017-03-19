@@ -30,8 +30,12 @@ private slots:
     void on_maze_toggled(bool checked);
     void on_line_toggled(bool checked);
     void on_test_toggled(bool checked);
-
     void on_speedgo_toggled(bool checked);
+    void on_mazego_toggled(bool checked);
+    void on_linego_toggled(bool checked);
+    void on_configCompass_clicked(bool checked);
+    void on_configGyro_clicked(bool checked);
+    void on_mazeResetBearing_clicked(bool checked);
 };
 
 #endif // MAINWINDOW_H

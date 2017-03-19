@@ -19,21 +19,29 @@ public:
     QAtomicInt gyro[3];
     QAtomicInt accel[3];
     QAtomicInt compass[3];
+    QAtomicInt bearing;
     QAtomicInt temperature;
 
     QAtomicInt gyroOffset[3];
     QAtomicInt accelOffset[3];
+    QAtomicInt compassOffset[3];
+    float      compassScale[3];
 
     QAtomicInt motorSpeed[4];    // -100 to 100
     QAtomicInt motorDistance[4];
     QAtomicInt totalDistance;
-    bool autoPing;
+    QAtomicInt autoPing;  // 0 = off, 1 = left and right, 2 = left, right and front
+
+    void configGyro(int count);
+    void resetBearing();
 
 protected:
     void run();
 
 private:
     bool continueThread;
+    bool paused;
+    int integral;
     int mpuOpen();
     void readGyro();
     void readAccel();

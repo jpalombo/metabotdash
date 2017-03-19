@@ -1,28 +1,36 @@
 #ifndef SPEEDCONTROL_H
 #define SPEEDCONTROL_H
 
+#include <QObject>
+#include <QThread>
 #include <QTime>
+#include <QMutex>
 #include "sensors.h"
 
-class SpeedControl
+class SpeedControl : public QThread
 {
+    Q_OBJECT
+
 public:
     SpeedControl(Sensors*);
+    ~SpeedControl();
 
     void setAccel(int);
     void setSpeed(int);
     void setDirection(int);
-    int setSpeedDir(int, int);
+    void setSpeedDir(int, int);
     void stop();
-    int update();
     int accel();
     int direction();
     int speed();
+    int stoppingDistance();
 
+protected:
+    void run();
+    int update();
 
-private:
+    QMutex lock;
     Sensors *sensors;
-
     int targetSpeed;
     int targetDirection;
     QTime timer;
@@ -32,7 +40,7 @@ private:
     int targetSpeedL;
     int targetSpeedR;
     int accelms;
-
+    bool continueThread;
 };
 
 #endif // SPEEDCONTROL_H
