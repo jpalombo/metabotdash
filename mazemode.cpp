@@ -136,7 +136,8 @@ void MazeMode::calcDirection()
      * 4. Turn right until bearing = 180
      * 5. Forward until front ping < 200
      * 6. Turn right until bearing = 270
-     * 7. Forward until front ping < 300
+     * 7. Forward until front ping < 300 Follow left wall
+     * 71. Forward until front ping < 300 Follow right wall
      * 8. Turn left until bearing = 180
      * 9. Forward until front ping < 200
      * 10. Turn left until bearing = 90
@@ -156,7 +157,7 @@ void MazeMode::calcDirection()
         out << "Move to state 1\n";
         break;
     case 1: // First straight
-        if (pingFront.value() < 250) {
+        if (pingFront.value() < 200) {
             state = 2;
             speed.setSpeedDir(ui->mazemax->value()/2, -ui->mazemax->value());
             followWall(NoWall, 0, 0);
@@ -194,7 +195,7 @@ void MazeMode::calcDirection()
         if (speed.speed() == 0) {
             speed.setSpeedDir(ui->mazemax->value(), 0);
         }
-        if (pingFront.value() < 300) {
+        if (pingFront.value() < 180) {
             state = 6;
             speed.setSpeedDir(ui->mazemax->value()/2, -ui->mazemax->value());
             followWall(NoWall, 0, 0);
@@ -214,7 +215,20 @@ void MazeMode::calcDirection()
             speed.setSpeedDir(ui->mazemax->value(), 0);
             followWall(LeftWall, 70, 2700);
         }
-        if (pingFront.value() < 300) {
+        if (pingRight.value() < 300) {
+            state = 71;
+            followWall(RightWall, 70, 2700);
+            out << "Move to state 71\n";
+        }
+        if (pingLeft.value() > 300) {
+            state = 8;
+            speed.setSpeedDir(ui->mazemax->value()/2, ui->mazemax->value());
+            followWall(NoWall, 0, 0);
+            out << "Move to state 8\n";
+        }
+        break;
+    case 71: // Forward through hairpin
+        if (pingLeft.value() > 300) {
             state = 8;
             speed.setSpeedDir(ui->mazemax->value()/2, ui->mazemax->value());
             followWall(NoWall, 0, 0);
@@ -233,7 +247,7 @@ void MazeMode::calcDirection()
         if (speed.speed() == 0) {
             speed.setSpeedDir(ui->mazemax->value(), 0);
         }
-        if (pingFront.value() < 300) {
+        if (pingFront.value() < 180) {
             state = 10;
             speed.setSpeedDir(ui->mazemax->value()/2, ui->mazemax->value());
             followWall(NoWall, 0, 0);

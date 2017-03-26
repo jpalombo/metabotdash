@@ -199,8 +199,6 @@ void LineMode::processFrame(Mat frame)
             int error = topright - qAbs(midblack);
             speed.setSpeedDir(error * ui->linespeedfactor->value() * ui->linespeed->value() / 500,
                               -midblack * ui->linedirfactor->value() * ui->linespeed->value() / 500);
-
-
         }
     }
     else {
