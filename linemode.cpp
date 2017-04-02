@@ -17,6 +17,7 @@ LineMode::LineMode(Ui::MainWindow* mui, Joystick* mjoystick, Sensors* msensors, 
 {
     ui->pages->setCurrentWidget(ui->linepage);
     setLightsOn(true);
+    speed.stop();
 
     QSettings settings;
     settings.beginGroup("LineMode");
@@ -25,6 +26,7 @@ LineMode::LineMode(Ui::MainWindow* mui, Joystick* mjoystick, Sensors* msensors, 
     ui->lineaccel->setValue(settings.value("Accel", 100).toInt());
     ui->linespeedfactor->setValue(settings.value("SpeedFactor", 10).toInt());
     ui->linedirfactor->setValue(settings.value("DirFactor", 10).toInt());
+    ui->lineerroroffset->setValue(settings.value("ErrorOffset", 80).toInt());
     settings.endGroup();
 
     connect(joystick, &Joystick::update, this, &LineMode::joystickUpdate);
@@ -44,24 +46,29 @@ LineMode::~LineMode()
     settings.setValue("Accel", ui->lineaccel->value());
     settings.setValue("SpeedFactor", ui->linespeedfactor->value());
     settings.setValue("DirFactor", ui->linedirfactor->value());
+    settings.setValue("ErrorOffset", ui->lineerroroffset->value());
     settings.endGroup();
 }
 
 void LineMode::joystickUpdate(int eType, int eNumber, int eValue)
 {
-    ui->linego->setChecked(joystick->dmh);
-    //speed.setSpeedDir(-joystick->posy/2000, -joystick->posx/2000);
+    Q_UNUSED(eType);
+    Q_UNUSED(eNumber);
+    Q_UNUSED(eValue);
 
-    if (eType == 1 && eNumber == 0 && eValue == 1) {
-        // square button pressed
-        qDebug() << "Take snapshot...";
-        std::string fname;
-        for (int i = 0; i < 16; i++) {
-            int imageindex = (nextimage + 1 + i) % 16;
-            fname = std::string("/home/pi/metabot3/lineimage") + std::to_string(i) + std::string(".png");
-            lodepng::encode(fname, (const unsigned char*)saveimage[imageindex].data, CAMWIDTH, CAMHEIGHT, LCT_GREY);
-        }
-    }
+    ui->linego->setChecked(joystick->dmh);
+    speed.setSpeedDir(-joystick->posy/2000, -joystick->posx/2000);
+
+//    if (eType == 1 && eNumber == 0 && eValue == 1) {
+//        // square button pressed
+//        qDebug() << "Take snapshot...";
+//        std::string fname;
+//        for (int i = 0; i < 16; i++) {
+//            int imageindex = (nextimage + 1 + i) % 16;
+//            fname = std::string("/home/pi/metabot3/lineimage") + std::to_string(i) + std::string(".png");
+//            lodepng::encode(fname, (const unsigned char*)saveimage[imageindex].data, CAMWIDTH, CAMHEIGHT, LCT_GREY);
+//        }
+//           }
 }
 
 void LineMode::LineMode::idle()
@@ -196,9 +203,10 @@ void LineMode::processFrame(Mat frame)
         starthint = midblack;
 
         if (ui->linego->isChecked()){
-            int error = topright - qAbs(midblack);
-            speed.setSpeedDir(error * ui->linespeedfactor->value() * ui->linespeed->value() / 500,
-                              -midblack * ui->linedirfactor->value() * ui->linespeed->value() / 500);
+            int error = ui->lineerroroffset->value() - qAbs(midblack);
+            int newspeed = error * ui->linespeedfactor->value() * ui->linespeed->value() / 500;
+            int newdir = -midblack * ui->linedirfactor->value() * ui->linespeed->value() / 500;
+            speed.setSpeedDir(newspeed, newdir);
         }
     }
     else {

@@ -31,6 +31,7 @@ public:
     QAtomicInt motorDistance[4];
     QAtomicInt totalDistance;
     QAtomicInt autoPing;  // 0 = off, 1 = left and right, 2 = left, right and front
+    QAtomicInt servo[3];  // valid values from 0 to 65535
 
     void configGyro(int count);
     void resetBearing();

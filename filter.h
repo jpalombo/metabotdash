@@ -10,12 +10,14 @@ public:
     void reset();
     int update(int p, int d);
     int value();
+    int unconfidence();
     void setSize(int);
 
 private:
     int m_size;
     int datacount;
     int last;
+    int lastUnconfidence;
 
     QVector<int> ping;
     QVector<int> distance;

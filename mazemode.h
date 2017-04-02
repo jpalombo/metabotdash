@@ -4,7 +4,6 @@
 #include <QFile>
 #include "abstractmode.h"
 #include "filter.h"
-#include "pid.h"
 
 class MazeMode : public AbstractMode
 {
@@ -17,15 +16,12 @@ public:
 
 private:
     QFile file;
-    int lastdistance;
     Filter pingLeft;
     Filter pingRight;
     Filter pingFront;
     int state;
 
     void calcDirection();
-    Pid pingpid;
-    Pid bearingpid;
 
     enum Wall {NoWall, LeftWall, RightWall};
     int targetBearing;
@@ -33,6 +29,9 @@ private:
     Wall targetWall;
 
     void followWall(Wall wall, int clearance, int bearing);
+    void turnright();
+    void turnleft();
+    void goforward();
 
 public slots:
     void joystickUpdate(int, int, int);

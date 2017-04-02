@@ -6,6 +6,7 @@ StatusMode::StatusMode(Ui::MainWindow* mui, Joystick* mjoystick, Sensors* msenso
 {
     ui->pages->setCurrentWidget(ui->testpage);
     sensors->autoPing = 2;  // left, right and front
+    speed.stop();
 
     file.setFileName("/home/pi/metabot3/compassconfig.csv");
     file.open(QIODevice::WriteOnly | QIODevice::Text);

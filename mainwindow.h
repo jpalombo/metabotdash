@@ -36,6 +36,11 @@ private slots:
     void on_configCompass_clicked(bool checked);
     void on_configGyro_clicked(bool checked);
     void on_mazeResetBearing_clicked(bool checked);
+    void on_reboot_clicked();
+    void on_speedResetBearing_clicked(bool checked);
+    void on_halt_clicked();
+    void on_April1_toggled(bool checked);
+    void on_anotherjoke_clicked();
 };
 
 #endif // MAINWINDOW_H

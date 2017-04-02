@@ -59,6 +59,8 @@ void Joystick::decode(QByteArray event)
             dmh = (eValue > 0);
             emit update(eType, eNumber, eValue);
         }
+        if (eNumber < AXES)
+            axis[eNumber] = eValue;
     }
 }
 

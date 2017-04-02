@@ -2,7 +2,7 @@
 #include <QDebug>
 
 Filter::Filter(int size) :
-    m_size(size), last(0), ping(m_size), distance(m_size)
+    m_size(size), last(0), lastUnconfidence(0), ping(m_size), distance(m_size)
 { 
     reset();
 }
@@ -11,6 +11,8 @@ void Filter::reset()
 {
     datacount = 0;
     last = 30000;
+    for (int i = 0; i < m_size; i++)
+        distance[i] = -1;
 }
 
 int Filter::update(int p, int d)
@@ -64,12 +66,20 @@ int Filter::update(int p, int d)
     }
     std::sort(pvec.begin(), pvec.end());
     last = pvec[(m_size-1)/2];
+    lastUnconfidence = qAbs(last - p) * 100 / p;
     return last;
 }
 
 int Filter::value()
 {
     return last;
+}
+
+int Filter::unconfidence()
+{
+    // returns percentage difference between last value  and last reading
+    qDebug() << last << lastUnconfidence;
+    return lastUnconfidence;
 }
 
 void Filter::setSize(int size)

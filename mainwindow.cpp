@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include <QDebug>
 #include <QTimer>
+#include <QProcess>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -82,6 +83,12 @@ void MainWindow::on_test_toggled(bool checked)
         modes->setMode(Modes::Status);
 }
 
+void MainWindow::on_April1_toggled(bool checked)
+{
+    if (checked)
+        modes->setMode(Modes::April1);
+}
+
 void MainWindow::on_speedgo_toggled(bool checked)
 {
     modes->buttonClicked(AbstractMode::Buttons::Go, checked);
@@ -112,3 +119,25 @@ void MainWindow::on_mazeResetBearing_clicked(bool checked)
     modes->buttonClicked(AbstractMode::ConfigGyro, checked);
 }
 
+void MainWindow::on_reboot_clicked()
+{
+    QProcess *rebootProcess = new QProcess();
+    rebootProcess->start("sudo reboot");
+}
+
+void MainWindow::on_speedResetBearing_clicked(bool checked)
+{
+    modes->buttonClicked(AbstractMode::ConfigGyro, checked);
+}
+
+void MainWindow::on_halt_clicked()
+{
+    QProcess *rebootProcess = new QProcess();
+    rebootProcess->start("sudo halt");
+}
+
+
+void MainWindow::on_anotherjoke_clicked()
+{
+    modes->buttonClicked(AbstractMode::Joke, false);
+}

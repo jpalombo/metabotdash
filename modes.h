@@ -19,7 +19,7 @@ public:
     explicit Modes(Ui::MainWindow *mui, QObject *parent = 0);
     ~Modes();
 
-    enum ModeType {Manual, Maze, Speed, Line, Status};
+    enum ModeType {Manual, Maze, Speed, Line, Status, April1};
     void setMode(ModeType);
     void buttonClicked(AbstractMode::Buttons, bool checked);
 

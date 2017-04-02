@@ -5,6 +5,7 @@
 #include <QFile>
 
 #define BUTTONS 14
+#define AXES 14
 
 /*  Playstation Joystick has the following controls
  *
@@ -53,6 +54,7 @@ public:
     QAtomicInt posy;
     bool dmh;       // Dead Man's Handle
     bool button[BUTTONS];
+    QAtomicInt axis[AXES];
 
 protected:
     void run();

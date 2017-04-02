@@ -22,7 +22,7 @@ class AbstractMode : public QObject
 {
     Q_OBJECT
 public:
-    enum Buttons {Go, ConfigCompass, ConfigGyro};
+    enum Buttons {Go, ConfigCompass, ConfigGyro, Joke};
     explicit AbstractMode(Ui::MainWindow*, Joystick*, Sensors*, CCamera*);
     virtual void idle();        // called when the message loop is idle
     virtual void go(bool);

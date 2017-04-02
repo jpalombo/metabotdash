@@ -4,6 +4,10 @@
 SpeedControl::SpeedControl(Sensors * s) :
     lock(), sensors(s), targetAccel(0), continueThread(true)
 {
+    sensors->motorSpeed[0] = 0;
+    sensors->motorSpeed[3] = 0;
+    sensors->motorSpeed[1] = 0;
+    sensors->motorSpeed[2] = 0;
     stop();     // stop the robot
     start();    // start the update thread
 }
@@ -87,6 +91,16 @@ int SpeedControl::update()
         leftspeed = startSpeedL + ((targetSpeedL - startSpeedL) * timer.elapsed() / accelms);
         rightspeed = startSpeedR + ((targetSpeedR - startSpeedR) * timer.elapsed() / accelms);
     }
+
+    //Limit speed to +/- 125
+    if (leftspeed < -125)
+        leftspeed = -125;
+    else if (leftspeed > 125)
+        leftspeed = 125;
+    if (rightspeed < -125)
+        rightspeed = -125;
+    else if (rightspeed > 125)
+        rightspeed = 125;
 
     sensors->motorSpeed[0] = leftspeed;
     sensors->motorSpeed[3] = leftspeed;

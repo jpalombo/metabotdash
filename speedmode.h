@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QFile>
 #include "abstractmode.h"
+#include "filter.h"
 #include "pid.h"
 
 class SpeedMode : public AbstractMode
@@ -14,17 +15,17 @@ public:
     ~SpeedMode();
     virtual void go(bool);
     virtual void idle();
+    void buttonClicked(AbstractMode::Buttons button, bool checked);
 
 private:
     QTime timer;
     QTimer *timer1sec;
-    Pid pid;
+    Filter pingLeft;
+    Filter pingRight;
     int loopcount;
-    int pinglower;
-    int pinghigher;
-    int lastdistance;
-    int direrror;
+    int startdistance;
     QFile file;
+    Pid bearingPid;
 
     int calcDirection();
 

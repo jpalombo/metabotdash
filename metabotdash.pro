@@ -43,7 +43,8 @@ SOURCES += main.cpp\
     speedcontrol.cpp \
     pid.cpp \
     filter.cpp \
-    lodepng/lodepng.cpp
+    lodepng/lodepng.cpp \
+    jokemode.cpp
 
 HEADERS  += mainwindow.h \
     glwidget.h \
@@ -68,7 +69,8 @@ HEADERS  += mainwindow.h \
     speedcontrol.h \
     pid.h \
     filter.h \
-    lodepng/lodepng.h
+    lodepng/lodepng.h \
+    jokemode.h
 
 FORMS    += mainwindow.ui
 

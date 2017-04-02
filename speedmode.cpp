@@ -3,7 +3,10 @@
 #include "speedmode.h"
 
 SpeedMode::SpeedMode(Ui::MainWindow* mui, Joystick* mjoystick, Sensors* msensors, CCamera *mcam) :
-    AbstractMode(mui, mjoystick, msensors, mcam), pid(1,0,0), loopcount(0)
+    AbstractMode(mui, mjoystick, msensors, mcam),
+    pingLeft(10), pingRight(10),
+    loopcount(0),
+    bearingPid(1,0,0)
 {
     ui->pages->setCurrentWidget(ui->speedpage);
 
@@ -11,10 +14,9 @@ SpeedMode::SpeedMode(Ui::MainWindow* mui, Joystick* mjoystick, Sensors* msensors
     settings.beginGroup("SpeedMode");
     ui->speedmax->setValue(settings.value("MaxSpeed", 100).toInt());
     ui->speedaccel->setValue(settings.value("Accel", 50).toInt());
-    ui->speedbias->setValue(settings.value("Bias", 0).toInt());
-    ui->speedKp->setValue(settings.value("Kp", 1).toInt());
-    ui->speedKi->setValue(settings.value("Ki", 0).toInt());
-    ui->speedKd->setValue(settings.value("Kd", 0).toInt());
+    ui->speedKping->setValue(settings.value("Kping", 10).toInt());
+    ui->speedKbearing->setValue(settings.value("Kbearing", 7).toInt());
+    ui->speedKdBearing->setValue(settings.value("KdBearing", 7).toInt());
     settings.endGroup();
 
     timer1sec = new QTimer(this);
@@ -24,7 +26,7 @@ SpeedMode::SpeedMode(Ui::MainWindow* mui, Joystick* mjoystick, Sensors* msensors
     file.setFileName("/home/pi/metabot3/speedtest.csv");
     file.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream out(&file);
-    out << "time(ms), distance(* 0.5mm), pingLeft, pingRight, direrror, speed, direction\n";
+    out << "time(ms), distance(* 0.5mm), pingLeft, pingRight, pingLeft Filt, pigRight Filt, Bearing , speed, direction\n";
 
     ui->speedgo->setChecked(false);
     go(false);
@@ -40,10 +42,9 @@ SpeedMode::~SpeedMode()
     settings.beginGroup("SpeedMode");
     settings.setValue("MaxSpeed", ui->speedmax->value());
     settings.setValue("Accel", ui->speedaccel->value());
-    settings.setValue("Bias", ui->speedbias->value());
-    settings.setValue("Kp", ui->speedKp->value());
-    settings.setValue("Ki", ui->speedKi->value());
-    settings.setValue("Kd", ui->speedKd->value());
+    settings.setValue("Kping", ui->speedKping->value());
+    settings.setValue("Kbearing", ui->speedKbearing->value());
+    settings.setValue("KdBearing", ui->speedKdBearing->value());
     settings.endGroup();
 
     sensors->autoPing = 0;   // stop autopinger
@@ -52,6 +53,14 @@ SpeedMode::~SpeedMode()
 void SpeedMode::joystickUpdate(int, int, int)
 {
     ui->speedgo->setChecked(joystick->dmh);
+}
+
+void SpeedMode::buttonClicked(AbstractMode::Buttons button, bool checked)
+{
+    if (button == ConfigGyro && checked) {
+        sensors->configGyro(2000);
+        ui->speedResetBearing->setChecked(false);
+    }
 }
 
 void SpeedMode::onesec()
@@ -65,20 +74,23 @@ void SpeedMode::go(bool checked)
     if (checked) {
         // Now running, so action of button would be to stop
         QTextStream out(&file);
-        out << "Start Run \n";
+        out << "Start Run"
+            << ", Kping =" << ui->speedKping->value()
+            << ", Kbearing =" << ui->speedKbearing->value()
+            << ", KdBearing =" << ui->speedKdBearing->value()
+            << ", Max Speed =" << ui->speedmax->value()
+            << ", Accel =" << ui->speedaccel->value() << "\n";
         ui->speedgo->setText("Stop");
         speed.setAccel(ui->speedaccel->value());
-        speed.setDirection(ui->speedbias->value());
+        speed.setDirection(0);
         speed.setSpeed(ui->speedmax->value());
-        pid.setKp(ui->speedKp->value());
-        pid.setKi(ui->speedKi->value());
-        pid.setKd(ui->speedKd->value());
-        lastdistance = sensors->totalDistance;
-        direrror = sensors->pingLeft - sensors->pingRight;
-        pid.reset(direrror);
-        int pingwidth = sensors->pingLeft + sensors->pingRight;
-        pinglower = pingwidth * 8 / 10;
-        pinghigher = pingwidth * 12 / 10;
+        pingLeft.reset();
+        pingRight.reset();
+        bearingPid.setKp(ui->speedKbearing->value());
+        bearingPid.setKd(ui->speedKdBearing->value());
+        bearingPid.reset(0);
+
+        startdistance = sensors->totalDistance;
         timer.start();
     } else {
         // Now stopped, so action of button would be to start
@@ -89,30 +101,34 @@ void SpeedMode::go(bool checked)
 }
 
 void SpeedMode::idle() {
+    pingLeft.update(sensors->pingLeft, sensors->totalDistance);
+    pingRight.update(sensors->pingRight, sensors->totalDistance);
     ui->speedleftping->setValue(sensors->pingLeft);
     ui->speedrightping->setValue(sensors->pingRight);
     ui->speedspeed->setValue(speed.speed());
     ui->speeddir->setValue(speed.direction());
+    ui->speedbearing->setValue(sensors->bearing/10);
 
     if (ui->speedgo->isChecked()) {
         // We're running
         ui->speedtime->setValue(timer.elapsed());
-        speed.setDirection(calcDirection() + ui->speedbias->value());
+        speed.setDirection(calcDirection());
         QTextStream out(&file);
-        out << timer.elapsed() << ", " << sensors->totalDistance - lastdistance
-            << ", " << sensors->pingLeft << ", " << sensors->pingRight << ", " << direrror << ", " << speed.speed()
-            << ", " << speed.direction() << "\n";
+        out << timer.elapsed() << ", "
+            << sensors->totalDistance - startdistance << ", "
+            << sensors->pingLeft << ", "
+            << sensors->pingRight << ", "
+            << pingLeft.value() <<  ", "
+            << pingRight.value() << ", "
+            << sensors->bearing <<  ", "
+            << speed.speed() << ", "
+            << speed.direction() << "\n";
     }
 }
 
 int SpeedMode::calcDirection() {
     loopcount++;
-    int pingwidth = sensors->pingLeft + sensors->pingRight;
-    if ((pingwidth > pinglower) && (pingwidth < pinghigher))
-        direrror = ((direrror * 4) + sensors->pingLeft - sensors->pingRight) / 5;
-    else
-        return 0;
-
-    int retval = pid.update(direrror) / 50;
-    return retval;
+    int direrror = (pingLeft.value() - pingRight.value()) * ui->speedKping->value();
+    int bearingerror = bearingPid.update(sensors->bearing) * ui->speedKbearing->value();
+    return (bearingerror + direrror) * speed.speed()/ 500;
 }

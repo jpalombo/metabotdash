@@ -3,7 +3,7 @@
 AbstractMode::AbstractMode(Ui::MainWindow* mui, Joystick* mjoystick, Sensors* msensors, CCamera *mcam) :
     QObject(0), ui(mui), joystick(mjoystick), sensors(msensors), cam(mcam), speed(msensors)
 {
-
+    speed.stop();
 }
 
 void AbstractMode::idle()

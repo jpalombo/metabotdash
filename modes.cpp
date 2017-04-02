@@ -8,6 +8,7 @@
 #include "mazemode.h"
 #include "linemode.h"
 #include "statusmode.h"
+#include "jokemode.h"
 
 Modes::Modes(Ui::MainWindow *mui, QObject *parent) :
     QObject(parent), ui(mui)
@@ -51,9 +52,7 @@ Modes::~Modes()
 
 void Modes::setMode(Modes::ModeType newMode)
 {
-    delete mode;
-    mode = 0;
-
+    AbstractMode *oldmode = mode;
     switch (newMode) {
     case Manual:
         mode = new ManualMode(ui, joystick, sensors, cam);
@@ -70,7 +69,11 @@ void Modes::setMode(Modes::ModeType newMode)
     case Status:
         mode = new StatusMode(ui, joystick, sensors, cam);
         break;
+    case April1:
+        mode = new JokeMode(ui, joystick, sensors, cam);
+        break;
     }
+    delete oldmode;
 }
 
 void Modes::buttonClicked(AbstractMode::Buttons button, bool checked)

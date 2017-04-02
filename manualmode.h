@@ -7,6 +7,7 @@ class ManualMode : public AbstractMode
 {
 public:
     ManualMode(Ui::MainWindow *mui, Joystick *mjoystick, Sensors *msensors, CCamera *mcam);
+    ~ManualMode();
     void idle();
 
 public slots:

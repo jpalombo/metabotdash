@@ -4,7 +4,7 @@
 #include "mazemode.h"
 
 MazeMode::MazeMode(Ui::MainWindow* mui, Joystick* mjoystick, Sensors* msensors, CCamera *mcam) :
-    AbstractMode(mui, mjoystick, msensors, mcam), pingLeft(10), pingRight(10), pingFront(10), pingpid(1,0,0), bearingpid(1,0,0)
+    AbstractMode(mui, mjoystick, msensors, mcam), pingLeft(10), pingRight(10), pingFront(10)
 {
     ui->pages->setCurrentWidget(ui->mazepage);
 
@@ -12,10 +12,9 @@ MazeMode::MazeMode(Ui::MainWindow* mui, Joystick* mjoystick, Sensors* msensors, 
     settings.beginGroup("MazeMode");
     ui->mazemax->setValue(settings.value("MaxSpeed", 10).toInt());
     ui->mazeaccel->setValue(settings.value("Accel", 20).toInt());
-    ui->pingKp->setValue(settings.value("Kp", 1).toInt());
-    ui->pingKi->setValue(settings.value("Ki", 0).toInt());
-    ui->pingKd->setValue(settings.value("Kd", 0).toInt());
-    ui->bearingKp->setValue(settings.value("BearingKp", 0).toInt());
+    ui->mazeKping->setValue(settings.value("Kping", 10).toInt());
+    ui->mazeKbearing->setValue(settings.value("Kbearing", 7).toInt());
+    ui->mazecornererr->setValue(settings.value("CornerError", 150).toInt());
     settings.endGroup();
 
     connect(joystick, &Joystick::update, this, &MazeMode::joystickUpdate);
@@ -25,6 +24,8 @@ MazeMode::MazeMode(Ui::MainWindow* mui, Joystick* mjoystick, Sensors* msensors, 
     file.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream out(&file);
     out << "distance(* 0.5mm), pingLeft, pingRight, pingFront, sm pingLeft, sm pingRight, sm pingFront, speed, direction, bearing\n";
+
+    speed.stop();
 }
 
 MazeMode::~MazeMode()
@@ -35,13 +36,13 @@ MazeMode::~MazeMode()
     settings.beginGroup("MazeMode");
     settings.setValue("MaxSpeed", ui->mazemax->value());
     settings.setValue("Accel", ui->mazeaccel->value());
-    settings.setValue("Kp", ui->pingKp->value());
-    settings.setValue("Ki", ui->pingKi->value());
-    settings.setValue("Kd", ui->pingKd->value());
-    settings.setValue("BearingKp", ui->bearingKp->value());
+    settings.setValue("Kping", ui->mazeKping->value());
+    settings.setValue("Kbearing", ui->mazeKbearing->value());
+    settings.setValue("CornerError", ui->mazecornererr->value());
     settings.endGroup();
 
     sensors->autoPing = 0;   // stop autopinger
+    speed.stop();
 }
 
 void MazeMode::go(bool checked)
@@ -51,18 +52,11 @@ void MazeMode::go(bool checked)
         QTextStream out(&file);
         out << "Start\n";
         ui->mazego->setText("Stop");
-        lastdistance = sensors->totalDistance;
         speed.setAccel(ui->mazeaccel->value());
         sensors->resetBearing();
         pingLeft.reset();
         pingRight.reset();
         pingFront.reset();
-        pingpid.setKp(ui->pingKp->value());
-        pingpid.setKi(ui->pingKi->value());
-        pingpid.setKd(ui->pingKd->value());
-        bearingpid.setKp(ui->bearingKp->value());
-        bearingpid.setKi(0);
-        bearingpid.setKd(0);
         state = 0;
     } else {
         // Now stopped, so action of button would be to start
@@ -89,10 +83,13 @@ void MazeMode::buttonClicked(AbstractMode::Buttons button, bool checked)
 
 void MazeMode::idle()
 {
-    int distance = sensors->totalDistance - lastdistance;
-    ui->mazeleftping->setValue(pingLeft.update((int)sensors->pingLeft, distance));
-    ui->mazerightping->setValue(pingRight.update((int)sensors->pingRight, distance));
-    ui->mazefrontping->setValue(pingFront.update((int)sensors->pingFront, distance));
+    int distance = sensors->totalDistance;
+    pingLeft.update((int)sensors->pingLeft, distance);
+    pingRight.update((int)sensors->pingRight, distance);
+    pingFront.update((int)sensors->pingFront, distance);
+    ui->mazeleftping->setValue((int)sensors->pingLeft);
+    ui->mazerightping->setValue((int)sensors->pingRight);
+    ui->mazefrontping->setValue((int)sensors->pingFront);
     ui->mazespeed->setValue(speed.speed());
     ui->mazedir->setValue(speed.direction());
     ui->mazebearing->setValue(sensors->bearing/10);
@@ -119,15 +116,28 @@ void MazeMode::followWall(Wall wall, int clearance, int bearing)
     targetWall = wall;
     targetWallClearance = clearance;
     targetBearing = bearing;
-    bearingpid.reset(sensors->bearing - bearing);
-    if (wall == LeftWall)
-        pingpid.reset(pingLeft.value() - targetWallClearance);
-    else if (wall == RightWall)
-        pingpid.reset(pingRight.value() - targetWallClearance);
+}
+
+void MazeMode::turnright()
+{
+    speed.setSpeedDir(ui->mazemax->value()/2, -ui->mazemax->value());
+    followWall(NoWall, 0, 0);
+}
+
+void MazeMode::turnleft()
+{
+    speed.setSpeedDir(ui->mazemax->value()/2, ui->mazemax->value());
+    followWall(NoWall, 0, 0);
+}
+
+void MazeMode::goforward()
+{
+    speed.setSpeedDir(ui->mazemax->value(), 0);
 }
 
 void MazeMode::calcDirection()
 {
+    static int startdist;
     /* Follow a series of targets
      * 0. Starting position, stopped
      * 1. Forward following left wall until right wall ping jumps up to ~650mm
@@ -147,6 +157,8 @@ void MazeMode::calcDirection()
      * 14. Stop
     */
 
+    int cerr = ui->mazecornererr->value();
+
     QTextStream out(&file);
 
     switch (state) {
@@ -157,15 +169,14 @@ void MazeMode::calcDirection()
         out << "Move to state 1\n";
         break;
     case 1: // First straight
-        if (pingFront.value() < 200) {
+        if (pingFront.value() < 360  && pingFront.unconfidence() < 10) {
+            turnright();
             state = 2;
-            speed.setSpeedDir(ui->mazemax->value()/2, -ui->mazemax->value());
-            followWall(NoWall, 0, 0);
             out << "Move to state 2\n";
         }
         break;
     case 2: // First right turn
-        if (sensors->bearing >= 750) {
+        if (sensors->bearing >= (900 - cerr)) {
             speed.stop();
             state = 3;
             out << "Move to state 3\n";
@@ -173,19 +184,18 @@ void MazeMode::calcDirection()
         break;
     case 3: // Second Straight
         if (speed.speed() == 0) {
-            speed.setSpeedDir(ui->mazemax->value(), 0);
+            goforward();
             followWall(LeftWall, 70, 900);
         }
         if (pingFront.value() < 800 && pingRight.value() > 300) {
             state = 4;
-            speed.setSpeedDir(ui->mazemax->value()/2, -ui->mazemax->value());
-            followWall(NoWall, 0, 0);
+            turnright();
             out << "Move to state 4\n";
         }
         break;
     case 4:
         // turn right in hairpin
-        if (sensors->bearing >= 1650) {
+        if (sensors->bearing >= (1800 - cerr)) {
             speed.stop();
             state = 5;
             out << "Move to state 5\n";
@@ -193,18 +203,17 @@ void MazeMode::calcDirection()
         break;
     case 5: // First Short Straight in Hairpin
         if (speed.speed() == 0) {
-            speed.setSpeedDir(ui->mazemax->value(), 0);
+            goforward();
         }
-        if (pingFront.value() < 180) {
+        if (pingFront.value() < 350 && pingFront.unconfidence() < 10) {
             state = 6;
-            speed.setSpeedDir(ui->mazemax->value()/2, -ui->mazemax->value());
-            followWall(NoWall, 0, 0);
+            turnright();
             out << "Move to state 6\n";
         }
         break;
     case 6:
         // second right in hairpin
-        if (sensors->bearing >= 2550) {
+        if (sensors->bearing >= (2700 - cerr)) {
             speed.stop();
             state = 7;
             out << "Move to state 7\n";
@@ -212,32 +221,47 @@ void MazeMode::calcDirection()
         break;
     case 7: // Forward through hairpin
         if (speed.speed() == 0) {
-            speed.setSpeedDir(ui->mazemax->value(), 0);
+            goforward();
             followWall(LeftWall, 70, 2700);
         }
         if (pingRight.value() < 300) {
-            state = 71;
+            state = 72;
             followWall(RightWall, 70, 2700);
+            out << "Move to state 72\n";
+        }
+        if (pingLeft.value() > 300) {
+            state = 71;
+            followWall(NoWall, 0, 2700);
             out << "Move to state 71\n";
         }
+        break;
+    case 71: // Forward through hairpin cant see right wall or left wall
+        if (pingRight.value() > 300) {
+            followWall(RightWall, 70, 2700);
+            state = 72;
+            out << "Move to state 72\n";
+        }
+        break;
+    case 72: // Forward through hairpin, can see right wall
         if (pingLeft.value() > 300) {
             state = 8;
-            speed.setSpeedDir(ui->mazemax->value()/2, ui->mazemax->value());
-            followWall(NoWall, 0, 0);
+            startdist = sensors->totalDistance;
             out << "Move to state 8\n";
         }
         break;
-    case 71: // Forward through hairpin
-        if (pingLeft.value() > 300) {
-            state = 8;
-            speed.setSpeedDir(ui->mazemax->value()/2, ui->mazemax->value());
-            followWall(NoWall, 0, 0);
-            out << "Move to state 8\n";
+    case 8: // Move forward a little bit (~15cm)
+        if ((sensors->totalDistance - startdist) > 1500) {
+            state = 81;
+            speed.stop();
+            out << "Move to state 81\n";
         }
         break;
-    case 8:
+    case 81:
         // turn left in hairpin
-        if (sensors->bearing <= 1950) {
+        if (speed.speed() == 0) {
+            turnleft();
+        }
+        if (sensors->bearing <= (1800 + cerr)) {
             speed.stop();
             state = 9;
             out << "Move to state 9\n";
@@ -245,18 +269,17 @@ void MazeMode::calcDirection()
         break;
     case 9: // Second Short Straight in Hairpin
         if (speed.speed() == 0) {
-            speed.setSpeedDir(ui->mazemax->value(), 0);
+            goforward();
         }
-        if (pingFront.value() < 180) {
+        if (pingFront.value() < 240 && pingFront.unconfidence() < 10) {
             state = 10;
-            speed.setSpeedDir(ui->mazemax->value()/2, ui->mazemax->value());
-            followWall(NoWall, 0, 0);
+            turnleft();
             out << "Move to state 10\n";
         }
         break;
     case 10:
         // second left in hairpin
-        if (sensors->bearing <= 1050) {
+        if (sensors->bearing <= (1000 + cerr)) {
             speed.stop();
             state = 11;
             out << "Move to state 11\n";
@@ -264,18 +287,17 @@ void MazeMode::calcDirection()
         break;
     case 11: // Third Long Straight
         if (speed.speed() == 0) {
-            speed.setSpeedDir(ui->mazemax->value(), 0);
+            goforward();
             followWall(RightWall, 70, 900);
         }
-        if (pingFront.value() < 800 && pingLeft.value() > 300) {
+        if (pingFront.value() < 250 && pingFront.unconfidence() < 10 && pingLeft.value() > 300) {
             state = 12;
-            speed.setSpeedDir(ui->mazemax->value()/2, ui->mazemax->value());
-            followWall(NoWall, 0, 0);
+            turnleft();
             out << "Move to state 12\n";
         }
         break;
     case 12: // Last left turn
-        if (sensors->bearing <= 150) {
+        if (sensors->bearing <= (cerr)) {
             speed.stop();
             state = 13;
             out << "Move to state 13\n";
@@ -283,31 +305,39 @@ void MazeMode::calcDirection()
         break;
     case 13: // Final Long Straight
         if (speed.speed() == 0) {
-            speed.setSpeedDir(ui->mazemax->value(), 0);
+            goforward();
             followWall(RightWall, 70, 0);
         }
         if (pingRight.value() >300 && pingLeft.value() > 300) {
             state = 14;
             followWall(NoWall, 0, 0);
+            startdist = sensors->totalDistance;
             out << "Move to state 14\n";
         }
         break;
     case 14:
-        speed.stop();
+        if ((sensors->totalDistance - startdist) > 2000) {
+            speed.stop();
+        }
         break;
     }
 
     // Finally adjust direction to follow the appropriate wall
     int pingdir = 0;
     if (targetWall == LeftWall)
-        pingdir = pingpid.update(pingLeft.value() - targetWallClearance);
+        pingdir = (pingLeft.value() - targetWallClearance) * ui->mazeKping->value();
     else if (targetWall == RightWall)
-        pingdir = pingpid.update(pingRight.value() - targetWallClearance);
+        pingdir = ( targetWallClearance - pingRight.value()) * ui->mazeKping->value();
     else
         return;
 
-    pingdir = pingdir * speed.speed()/ 1000;
-    int bearingdir = bearingpid.update(sensors->bearing - targetBearing) / 50;
-    speed.setDirection(bearingdir + pingdir);
+    int bearingdir = (sensors->bearing - targetBearing) * ui -> mazeKbearing->value();
+    int totaldir = bearingdir + pingdir;
+    if (totaldir > 250)
+        totaldir = 250;
+    if (totaldir < -250)
+        totaldir = -250;
+
+    speed.setDirection(totaldir * speed.speed()/ 500);
 }
 

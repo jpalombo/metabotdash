@@ -13,6 +13,7 @@ Sensors::Sensors() :
     gyroOffset{0, 0, 0},
     accelOffset{0, 0, 0},
     autoPing(0),
+    servo{0, 0, 0},
     continueThread(true),
     paused(false)
 {
@@ -213,20 +214,29 @@ void Sensors::readTemp()
 //      24 :    Target Motor 2 Speed (1 byte)
 //      25 :    Target Motor 3 Speed (1 byte)
 //      26 :    Options (low bit = autoping on / off)
-//      27 :    Read Ready (master sets to 1 when ready to read, slave sets to zero when multi-byte values updated
+//      27, 28 : Ball Thrower Motor Speed
+//      29 :    Ball Thrower Servo 1
+//      30 :    Ball Thrower Servo 2
+//      31 :    Read Ready (master sets to 1 when ready to read, slave sets to zero when multi-byte values updated
+
+
 void Sensors::readProp()
 {
-    // Write out speed registers and autoping setting
+    // Write out speed registers, autoping setting and servo values
     QByteArray registers(32, 0);
     for(int i = 0; i < 4; i++) {
         int8_t s = -motorSpeed[i];
         registers[i] = s;
     }
     registers[4] = autoPing;
-    writeBytes(0x42, 22, 5, (uint8_t *) registers.data());
+    registers[5] = (servo[0] >> 8) & 0xff;
+    registers[6] = servo[0] & 0xff;
+    registers[7] = servo[1] & 0xff;
+    registers[8] = servo[2] & 0xff;
+    writeBytes(0x42, 22, 9, (uint8_t *) registers.data());
 
     // Check if there is data ready to read
-    int count = readBytes(0x42, 27, 1, (uint8_t *)registers.data());  // Read Register 27 = Read Ready
+    int count = readBytes(0x42, 31, 1, (uint8_t *)registers.data());  // Read Register 31 = Read Ready
     if (count < 0) {
         // Propeller has reset itself, try reloading
         reloadProp();
@@ -248,6 +258,6 @@ void Sensors::readProp()
         pingLeft = registers.at(18) + (registers.at(19) << 8);
         pingRight = registers.at(16) + (registers.at(17) << 8);
         pingFront = registers.at(20) + (registers.at(21) << 8);
-        writeByte(0x42, 27, 1);  // prime ready for next read
+        writeByte(0x42, 31, 1);  // prime ready for next read
     }
 }
